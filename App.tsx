@@ -11,6 +11,7 @@ import * as db from './services/supabaseService';
 import * as gemini from './services/geminiService';
 import { useMascot } from './hooks/useMascot';
 import { MASCOT_MESSAGES } from './constants';
+import OneSignal from 'react-onesignal';
 
 function App() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
@@ -91,6 +92,23 @@ function App() {
     const storedGender = localStorage.getItem('gender');
     if (storedGender === 'female') setGender('female');
   }, []);
+
+    useEffect(() => {
+    const init = async () => {
+        await OneSignal.init({
+        appId: '56e42826-b0c3-4776-8e97-e677dd8fa050',
+        allowLocalhostAsSecureOrigin: true,
+        })
+
+        const permission = await OneSignal.Notifications.permission
+
+        if (permission === false) {
+        await OneSignal.Slidedown.promptPush()
+        }
+    }
+
+    init()
+    }, [])
 
   const toggleTheme = () => {
     const newMode = !darkMode;
