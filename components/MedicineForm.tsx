@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Medicine } from '../types';
+import { Clock } from 'lucide-react';
 
 interface MedicineFormProps {
   initialData?: Medicine | null;
@@ -70,14 +71,23 @@ const MedicineForm: React.FC<MedicineFormProps> = ({ initialData, onSave, onCanc
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Horário</label>
+<div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Horário
+          </label>
           <input
             type="time"
-            className="w-full p-4 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-lg"
+            required
             value={time}
             onChange={(e) => setTime(e.target.value)}
-            required
+            className="w-full h-14 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all text-center text-xl font-bold"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingInlineStart: '0',
+              paddingInlineEnd: '0'
+            }}
           />
         </div>
 

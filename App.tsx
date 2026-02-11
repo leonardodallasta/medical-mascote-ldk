@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Settings, Trash2, Bell, Plus, CheckCircle, Moon, Sun, Edit2, X, Clock, CircleUser, Sparkles } from 'lucide-react';
 import Mascot from './components/Mascot';
 import MedicineForm from './components/MedicineForm';
@@ -12,10 +12,6 @@ import { useMascot } from './hooks/useMascot';
 import { MASCOT_MESSAGES } from './constants';
 import OneSignal from 'react-onesignal';
 
-/**
- * Componente principal da aplicação Dia Leve.
- * Gerencia o estado global de medicamentos, logs, mascot e notificações.
- */
 function App() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [logs, setLogs] = useState<Log[]>([]);
@@ -26,19 +22,10 @@ function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [gender, setGender] = useState<'male' | 'female'>('male');
   const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
 
   const { status, streak } = useMascot(medicines, logs);
 
-  useEffect(() => {
-    const interval = setInterval(() => setCurrentTime(new Date()), 60000);
-    return () => clearInterval(interval);
-  }, []);
-
-  /**
-   * Inicializa o OneSignal. 
-   * No iOS PWA, a permissão nativa é ativada após o Slidedown ou interação.
-   */
+  // Inicializa OneSignal
   useEffect(() => {
     const initOneSignal = async () => {
       try {
@@ -53,6 +40,7 @@ function App() {
     initOneSignal();
   }, []);
 
+  // Tema e Gênero
   useEffect(() => {
     const storedTheme = localStorage.getItem('theme');
     const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -69,6 +57,7 @@ function App() {
     if (storedGender === 'female') setGender('female');
   }, []);
 
+  // Carregar Dados
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -116,7 +105,6 @@ function App() {
     setEditingId(null);
     setIsAdding(false);
 
-    // Solicita permissão se ainda estiver no padrão (Gesto do usuário ao salvar)
     if (OneSignal.Notifications.permission === false) {
       await OneSignal.Slidedown.promptPush();
     }
@@ -136,7 +124,6 @@ function App() {
   };
 
   const handleTakeMedicine = async (medId: string, isLate: boolean = false, dateOverride?: Date) => {
-    // Tenta garantir que as notificações estejam ativas no clique de "Tomar"
     if (!OneSignal.Notifications.permission) {
       OneSignal.Slidedown.promptPush();
     }
@@ -182,21 +169,33 @@ function App() {
     return (now.getTime() - medTime.getTime()) / (1000 * 60 * 60) > 1;
   };
 
-const getMascotMessage = () => {
+  // --- LÓGICA DE MENSAGENS ---
+  
+  // 1. Calcula se tudo foi tomado hoje (memorizado para não recalcular à toa)
+  const allTakenToday = useMemo(() => {
     const todayIdx = new Date().getDay();
     const requiredToday = medicines.filter(m => m.daysOfWeek.includes(todayIdx));
-    const allTakenToday = requiredToday.length > 0 && requiredToday.every(m => !!getTodayLog(m.id));
+    // Se não tem remédio hoje, não conta como "tudo tomado" para mensagem de parabéns,
+    // mas o mascote fica feliz por padrão. Ajuste conforme gosto.
+    if (requiredToday.length === 0) return false; 
+    
+    return requiredToday.every(m => !!getTodayLog(m.id));
+  }, [medicines, logs]);
 
-    // Se tudo foi tomado, pegamos uma mensagem aleatória da lista HAPPY
+  // 2. Escolhe a mensagem e TRAVA ela (só muda se o status ou o allTaken mudar)
+  const mascotMessage = useMemo(() => {
+    // Se tomou tudo, pega aleatória do HAPPY
     if (allTakenToday) {
       const happyMessages = MASCOT_MESSAGES[MascotStatus.HAPPY];
       return happyMessages[Math.floor(Math.random() * happyMessages.length)];
     }
     
-    // Se não, pegamos baseada no status atual (Concerned, Sick, etc)
+    // Se não, pega do status atual
     const messages = MASCOT_MESSAGES[status];
     return messages[Math.floor(Math.random() * messages.length)];
-  };
+  }, [status, allTakenToday]); 
+
+  // -------------------------------------
 
   if (loading) {
     return (
@@ -258,7 +257,8 @@ const getMascotMessage = () => {
       </header>
 
       <main className="max-w-md mx-auto p-4 space-y-6">
-        <Mascot status={status} message={getMascotMessage()} gender={gender} />
+        {/* Passamos a variável travada mascotMessage, não a função */}
+        <Mascot status={status} message={mascotMessage} gender={gender} />
         <FoodPlan />
 
         <div>
